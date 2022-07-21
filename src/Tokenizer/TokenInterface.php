@@ -5,6 +5,6 @@ namespace Pierotto\TokenizerBundle\Tokenizer;
 interface TokenInterface extends \JsonSerializable
 {
 
-	public static function createFromStdObject(\stdClass $token): static;
+	public static function createFromStdObject(\stdClass $token): self;
 
 }
