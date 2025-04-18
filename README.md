@@ -1,82 +1,91 @@
 Tokenizer Bundle
+================
 
-The package is used for secure data exchange between two parties using a JWT token.
+A lightweight Symfony bundle for encoding and decoding data using JWT.  
+It allows secure, structured communication between services or systems using tokenized data.
+
+## Requirements
+
+- PHP 8.3+
+- Symfony 7.0+
 
 ## Installation
 
-Require the bundle and its dependencies with composer:
+Install the bundle via Composer:
 
-`$ composer require pierotto/tokenizer-bundle`
+```bash
+composer require pierotto/tokenizer-bundle
+```
 
-Register the bundle:
+Register the bundle (if using Symfony without Flex):
 
 ```php
-// app/AppKernel.php
-public function registerBundles(): array
-{
-    $bundles = [
-        new \Pierotto\TokenizerBundle\TokenizerBundle(),
-    ];
-}
+// bundles.php
+return [
+    Pierotto\TokenizerBundle\Infrastructure\Symfony\TokenizerBundle::class => ['all' => true],
+];
 ```
 
-Setup configuration:
+## Configuration
 
-```yml
+Add the following configuration to your `config/packages/tokenizer.yaml`:
+
+```yaml
 tokenizer:
     algorithm: 'RS256'
-    secret_key: '%kernel.project_dir%/app/config/keys/secret.key'
-    public_key: '%kernel.project_dir%/app/config/keys/public.key'
-    pass_phrase: 'abcd123'
+    private_key: '%kernel.project_dir%/config/keys/private.key'
+    public_key: '%kernel.project_dir%/config/keys/public.key'
+    passphrase: 'abcd123'
 ```
 
-Generate the public and private key using the console command:
+## Key generation
 
-```
-php bin/console tokenizer:generate:key
+Generate a private and public key pair using the console command:
+
+```bash
+php bin/console tokenizer:generate:keys
 ```
 
 ## Usage
 
-Start with `\Pierotto\TokenizerBundle\Tokenizer\TokenInterface` interface implementation. 
-Object of this class represents data, which are encoded into shared token.
+Start by implementing the `\Pierotto\TokenizerBundle\Tokenizer\TokenInterface`.  
+This object represents the data that will be encoded into a token.
 
 ```php
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
-namespace MyProject\Token;
+namespace App\Token;
 
-class TokenClass implements \Pierotto\TokenizerBundle\Tokenizer\TokenInterface
+use Pierotto\TokenizerBundle\Tokenizer\TokenInterface;
+
+class TokenClass implements TokenInterface
 {
-	public function __construct(
-		private readonly int $user
-	)
-	{
-	}
+    public function __construct(
+        private readonly int $user,
+    ) {}
 
-	public static function createFromStdObject(\stdClass $token): static
-	{
-		return new self(
-			$token->user
-		);
-	}
+    public static function createFromStdObject(\stdClass $token): self
+    {
+        return new self($token->user);
+    }
 
-	public function jsonSerialize(): array
-	{
-		return [
-			'user' => $this->user,
-		];
-	}
+    public function jsonSerialize(): array
+    {
+        return ['user' => $this->user];
+    }
 
-	public function getUser(): int
-	{
-		return $this->user;
-	}
+    public function getUser(): int
+    {
+        return $this->user;
+    }
 }
 ```
 
-Now you can tokenize your object class with tokenizer. The output is a token, which can then be converted back into an object using the `decode` method.
+Now you can encode and decode your object using the tokenizer service:
 
-```
-$token = $this->tokenizer->create(new \MyProject\Token\TokenClass(1));
+```php
+$token = $tokenizer->encode(new TokenClass(1));
+
+/** @var TokenClass $object */
+$object = $tokenizer->decode($token, TokenClass::class);
 ```
